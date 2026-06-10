@@ -12,3 +12,4 @@ data/
 交付包/
 *.log
 *.tmp
+.tmp-locks/

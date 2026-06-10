@@ -227,8 +227,8 @@ class StudentClient:
                     self._open_connection(old_host, old_port, old_name, self.client_id)
                     self._start_background_threads()
                 return
-            except Exception as exc:
-                self._emit_error(f"重连失败：{exc}")
+            except Exception:
+                self._emit_status("老师端已断开，正在后台重连。请等待老师重新启动课堂。")
 
     def _emit_status(self, text: str) -> None:
         if self.on_status:

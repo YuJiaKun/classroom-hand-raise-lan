@@ -5,8 +5,9 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtCore import QRect
 
 from classroom_hand_raise.teacher.ui import TeacherWindow
@@ -145,6 +146,17 @@ class UiSmokeTests(unittest.TestCase):
         self.assertFalse(window.raise_button.isEnabled())
         self.assertIn("请稍候", window.raise_button.text())
         self.assertTrue(window.lower_button.isEnabled())
+
+    def test_student_reconnect_failure_updates_status_without_modal_popup(self):
+        window = StudentWindow()
+        window.force_exit = True
+        self.addCleanup(window.close)
+
+        with patch.object(QMessageBox, "warning") as warning:
+            window.show_error("重连失败：[WinError 10061] 由于目标计算机积极拒绝，无法连接。")
+
+        warning.assert_not_called()
+        self.assertEqual(window.status_label.text(), "老师端已断开，正在后台重连。请等待老师重新启动课堂。")
 
     def test_source_smoke_test_does_not_create_class_session_data(self):
         with tempfile.TemporaryDirectory() as tmp:

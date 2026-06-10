@@ -227,7 +227,7 @@ class StudentWindow(QMainWindow):
         self.send_help_button.clicked.connect(self.send_help_request)
         self.classroom_combo.currentIndexChanged.connect(self.apply_selected_classroom)
 
-        self.signals.status.connect(self.status_label.setText)
+        self.signals.status.connect(self.update_connection_status)
         self.signals.error.connect(self.show_error)
         self.signals.connected.connect(self._set_connected)
         self.signals.classrooms.connect(self.update_classroom_combo)
@@ -377,6 +377,9 @@ class StudentWindow(QMainWindow):
     def update_send_status(self, text: str) -> None:
         self.send_status_label.setText(f"发送状态：{text}")
 
+    def update_connection_status(self, text: str) -> None:
+        self.status_label.setText(self._friendly_connection_text(text))
+
     def add_teacher_reply(self, message: dict) -> None:
         if self.reply_list.count() == 1 and self.reply_list.item(0).text() == "暂无老师回复":
             self.reply_list.clear()
@@ -440,8 +443,25 @@ class StudentWindow(QMainWindow):
             self.cooldown_timer.stop()
 
     def show_error(self, text: str) -> None:
-        self.status_label.setText(text)
-        QMessageBox.warning(self, "提示", text)
+        friendly_text = self._friendly_connection_text(text)
+        self.status_label.setText(friendly_text)
+        if self._is_background_reconnect_error(text):
+            return
+        QMessageBox.warning(self, "提示", friendly_text)
+
+    def _friendly_connection_text(self, text: str) -> str:
+        if self._is_background_reconnect_error(text):
+            return "老师端已断开，正在后台重连。请等待老师重新启动课堂。"
+        if text.startswith("连接失败") and self._looks_like_connection_refused(text):
+            return "连接失败：老师端未启动或拒绝连接，请确认老师端已点击“启动课堂”。"
+        return text
+
+    def _is_background_reconnect_error(self, text: str) -> bool:
+        return text.startswith("重连失败")
+
+    def _looks_like_connection_refused(self, text: str) -> bool:
+        markers = ("WinError 10061", "Errno 10061", "积极拒绝", "Connection refused")
+        return any(marker in text for marker in markers)
 
     def _set_connected(self, connected: bool) -> None:
         self.connect_button.setEnabled(not connected)
